@@ -6,7 +6,10 @@ width, height = 1920, 1080
 real_min, real_max = -2.0, 1.0
 imag_min, imag_max = -1.5, 1.5
 
-max_iterations = 1000
+real_inc = (real_max - real_min) / width
+imag_inc = (imag_max - imag_min) / height
+
+max_iterations = 100
 
 def mandelbrot(c):
     z = 0
@@ -18,12 +21,16 @@ def mandelbrot(c):
 
 image = Image.new('RGB', (width, height))
 
+real = real_min
+
 for px in range(width):
+    imag = imag_min
     for py in range(height):
-        a = real_min + (px / (width - 1)) * (real_max - real_min)
-        b = imag_min + (py / (height - 1)) * (imag_max - imag_min)
-        c = complex(a, b)
+        c = complex(real, imag)
         m = mandelbrot(c)
         color = 255 - int(m * 255 / max_iterations)
         image.putpixel((px, py), (color, color, color))
+        imag += imag_inc
+    real += real_inc
+    
 image.save('mandelbrot.png')
