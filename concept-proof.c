@@ -14,43 +14,40 @@
 #define IMAG_MAX 1.5
 #define INC_REAL (REAL_MAX - REAL_MIN)/IMG_W
 #define INC_IMAG (IMAG_MAX - IMAG_MIN)/IMG_H
-typedef struct complexNumber{
+
+typedef struct complexNumber {
     float real;
     float imag;
 } C;
 
-float complexAbs(C *c){
-    return sqrt((c->real*c->real) + (c->imag*c->imag));
+float complexAbs(C *c) {
+    return sqrt((c->real * c->real) + (c->imag * c->imag));
 }
 
-C complexAdd(C z, C cnst){
-    C new;
-    new.real = z.real + cnst.real;
-    new.imag = z.imag + cnst.imag;
-    return new;
+void complexAdd(C *z, C *cnst, C *result) {
+    result->real = z->real + cnst->real;
+    result->imag = z->imag + cnst->imag;
 }
 
-C complexMult(C x, C y){
-    C new;
-    new.real = (x.real * y.real) - (x.imag * y.imag);
-    new.imag = (x.real * y.imag) + (x.imag * y.real);
-    return new;
+void complexMult(C *x, C *y, C *result) {
+    result->real = (x->real*y->real)-(x->imag*y->imag);
+    result->imag = (x->real*y->imag)+(x->imag*y->real);
 }
 
-int mandelbrot(C cnst){
-    C z;
-    z.real = 0.0;
-    z.imag = 0.0;
-    for (int i = 0; i < MAX_ITR; i++){
+int mandelbrot(C *cnst) {
+    C z = {0.0, 0.0};
+    C zSquared;
+    for (int i = 0; i < MAX_ITR; i++) {
         if (complexAbs(&z) > 2) {
             return i;
         }
-        z = complexAdd(complexMult(z, z), cnst);
+        complexMult(&z, &z, &zSquared);
+        complexAdd(&zSquared, cnst, &z);
     }
     return MAX_ITR;
 }
 
-int main(void){
+int main(void) {
     unsigned char *image = (unsigned char *)malloc(IMG_W * IMG_H * CHANNELS);
 
     if (image == NULL) {
@@ -59,15 +56,13 @@ int main(void){
     }
 
     float real = REAL_MIN;
-    for(int x = 0 ; x < IMG_W ; x++){
+    for (int x = 0; x < IMG_W; x++) {
         float imag = IMAG_MIN;
-        for(int y = 0 ; y < IMG_H ; y++){
-            C planarComplexNum;
-            planarComplexNum.real = real;
-            planarComplexNum.imag = imag;
-            int itrs = mandelbrot(planarComplexNum);
+        for (int y = 0; y < IMG_H; y++) {
+            C planarComplexNum = {real, imag};
+            int itrs = mandelbrot(&planarComplexNum);
             int pixel_index = (y * IMG_W + x) * CHANNELS;
-            unsigned char color = 255 - ((int)itrs*255 / MAX_ITR);
+            unsigned char color = 255 - ((int)itrs * 255 / MAX_ITR);
             image[pixel_index + 0] = color;
             image[pixel_index + 1] = color;
             image[pixel_index + 2] = color;
@@ -83,8 +78,6 @@ int main(void){
     }
 
     free(image);
-    printf("Image written to gradient.png\n");
+    printf("Image written to mandel-c.png\n");
     return 0;
 }
-
-// perf improvements: free memory in complexXXX functions
