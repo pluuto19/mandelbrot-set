@@ -33,4 +33,4 @@ for px in range(width):
         imag += imag_inc
     real += real_inc
     
-image.save('mandelbrot.png')
+image.save('mandel-py.png')

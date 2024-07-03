@@ -4,29 +4,79 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#define img_w 1920
-#define img_h 1080
-#define channels 3
+#define IMG_W 1920
+#define IMG_H 1080
+#define CHANNELS 3
+#define MAX_ITR 100
+#define REAL_MIN -2.0
+#define REAL_MAX 1.0
+#define IMAG_MIN -1.5
+#define IMAG_MAX 1.5
+#define INC_REAL (REAL_MAX - REAL_MIN)/IMG_W
+#define INC_IMAG (IMAG_MAX - IMAG_MIN)/IMG_H
+typedef struct complexNumber{
+    float real;
+    float imag;
+} C;
+
+float complexAbs(C *c){
+    return sqrt((c->real*c->real) + (c->imag*c->imag));
+}
+
+C complexAdd(C z, C cnst){
+    C new;
+    new.real = z.real + cnst.real;
+    new.imag = z.imag + cnst.imag;
+    return new;
+}
+
+C complexMult(C x, C y){
+    C new;
+    new.real = (x.real * y.real) - (x.imag * y.imag);
+    new.imag = (x.real * y.imag) + (x.imag * y.real);
+    return new;
+}
+
+int mandelbrot(C cnst){
+    C z;
+    z.real = 0.0;
+    z.imag = 0.0;
+    for (int i = 0; i < MAX_ITR; i++){
+        if (complexAbs(&z) > 2) {
+            return i;
+        }
+        z = complexAdd(complexMult(z, z), cnst);
+    }
+    return MAX_ITR;
+}
 
 int main(void){
-    unsigned char *image = (unsigned char *)malloc(img_w * img_h * channels);
+    unsigned char *image = (unsigned char *)malloc(IMG_W * IMG_H * CHANNELS);
 
     if (image == NULL) {
         fprintf(stderr, "Failed to allocate memory\n");
         return 1;
     }
 
-    for (int y = 0; y < img_h; y++) {
-        for (int x = 0; x < img_w; x++) {
-            int index = (y * img_w + x) * channels;
-            unsigned char color = (unsigned char)(255 * ((float)x / (img_w - 1)));
-            image[index + 0] = color;
-            image[index + 1] = color;
-            image[index + 2] = color;
+    float real = REAL_MIN;
+    for(int x = 0 ; x < IMG_W ; x++){
+        float imag = IMAG_MIN;
+        for(int y = 0 ; y < IMG_H ; y++){
+            C planarComplexNum;
+            planarComplexNum.real = real;
+            planarComplexNum.imag = imag;
+            int itrs = mandelbrot(planarComplexNum);
+            int pixel_index = (y * IMG_W + x) * CHANNELS;
+            unsigned char color = 255 - ((int)itrs*255 / MAX_ITR);
+            image[pixel_index + 0] = color;
+            image[pixel_index + 1] = color;
+            image[pixel_index + 2] = color;
+            imag += INC_IMAG;
         }
+        real += INC_REAL;
     }
 
-    if (!stbi_write_png("gradient.png", img_w, img_h, channels, image, img_w * channels)) {
+    if (!stbi_write_png("mandel-c.png", IMG_W, IMG_H, CHANNELS, image, IMG_W * CHANNELS)) {
         fprintf(stderr, "Failed to write image\n");
         free(image);
         return 1;
@@ -36,3 +86,5 @@ int main(void){
     printf("Image written to gradient.png\n");
     return 0;
 }
+
+// perf improvements: free memory in complexXXX functions
