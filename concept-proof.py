@@ -4,11 +4,11 @@ from PIL import Image
 width, height = 1920, 1080
 
 real_min, real_max = -2.0, 1.0
-imag_min, imag_max = -1.5, 1.5
+imag_min, imag_max = -0.85, 0.8375
 
 real_inc = (real_max - real_min) / width
 imag_inc = (imag_max - imag_min) / height
-
+# 1.6875
 max_iterations = 100
 
 def mandelbrot(c):

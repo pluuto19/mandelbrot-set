@@ -10,11 +10,11 @@
 #define MAX_ITR 100
 #define REAL_MIN -2.0
 #define REAL_MAX 1.0
-#define IMAG_MIN -1.5
-#define IMAG_MAX 1.5
+#define IMAG_MIN -0.85
+#define IMAG_MAX 0.8375
 #define INC_REAL (REAL_MAX - REAL_MIN) / IMG_W
 #define INC_IMAG (IMAG_MAX - IMAG_MIN) / IMG_H
-
+#define RATIO IMG_W / IMG_H
 typedef struct complexNumber
 {
     float real;
@@ -38,6 +38,13 @@ void complexMult(C *x, C *y, C *res)
     res->imag = (x->real * y->imag) + (x->imag * y->real);
 }
 
+void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned char *b)
+{
+    *r = (unsigned char)(itrs * 2.0f);
+    *g = (unsigned char)(itrs * 1.9f);
+    *b = (unsigned char)(itrs * 2.35f);
+}
+
 int mandelbrot(C *cnst)
 {
     C z = {0.0, 0.0};
@@ -54,13 +61,6 @@ int mandelbrot(C *cnst)
     return MAX_ITR;
 }
 
-void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned char *b)
-{
-    *r = (unsigned char)(itrs * 2.0f);
-    *g = (unsigned char)(itrs * 1.9f);
-    *b = (unsigned char)(itrs * 2.35f);
-}
-
 int main(void)
 {
     unsigned char *image = (unsigned char *)malloc(IMG_W * IMG_H * CHANNELS);
@@ -74,6 +74,7 @@ int main(void)
     float real = REAL_MIN;
     for (int x = 0; x < IMG_W; x++)
     {
+        x *= RATIO;
         float imag = IMAG_MIN;
         for (int y = 0; y < IMG_H; y++)
         {
