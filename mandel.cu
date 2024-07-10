@@ -14,6 +14,8 @@
 #define IMAG_MAX 1.5
 #define INC_REAL (REAL_MAX - REAL_MIN) / IMG_W
 #define INC_IMAG (IMAG_MAX - IMAG_MIN) / IMG_H
+#define NUM_THREADS 32 * 32 // GTX 1650 supports threads launching in 2 dimnesions, each with 32 threads
+#define NUM_BLOCKS (int)ceil(((float)IMG_W * IMG_H) / NUM_THREADS)
 
 typedef struct complexNumber
 {
@@ -61,6 +63,12 @@ void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned char *b)
     *b = (unsigned char)(itrs * 2.35f);
 }
 
+__global__ void parallelMandelbrot(void){
+    //int x = interpolate threadIdx.x and threadIdx.y and block
+    //int y = 
+    // if x*y < N
+}
+
 int main(void){
     // figure out 2D blocks with 2D threads or 1D blocks with 2D threads
     // I would have to interpolate blockIdx and threadIdx in x and y to find x and y pixels co-ords
@@ -80,4 +88,6 @@ int main(void){
     // devicetohostcopy
     // pass to stb_img
     // repeat loop
+    dim3 block_dim(32,32,1);
+    parallelMandelbrot<<<NUM_BLOCKS, block_dim>>>();
 }
