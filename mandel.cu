@@ -23,24 +23,24 @@ typedef struct complexNumber
     float imag;
 } C;
 
-float complexAbs(C *c)
+__device__ float complexAbs(C *c)
 {
     return sqrt((c->real * c->real) + (c->imag * c->imag));
 }
 
-void complexAdd(C *z, C *cnst, C *res)
+__device__ void complexAdd(C *z, C *cnst, C *res)
 {
     res->real = z->real + cnst->real;
     res->imag = z->imag + cnst->imag;
 }
 
-void complexMult(C *x, C *y, C *res)
+__device__ void complexMult(C *x, C *y, C *res)
 {
     res->real = (x->real * y->real) - (x->imag * y->imag);
     res->imag = (x->real * y->imag) + (x->imag * y->real);
 }
 
-int mandelbrot(C *cnst)
+__device__ int mandelbrot(C *cnst)
 {
     C z = {0.0, 0.0};
     C zSq;
@@ -56,7 +56,7 @@ int mandelbrot(C *cnst)
     return MAX_ITR;
 }
 
-void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned char *b)
+__device__ void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned char *b)
 {
     *r = (unsigned char)(itrs * 2.0f);
     *g = (unsigned char)(itrs * 1.9f);
@@ -64,32 +64,32 @@ void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned char *b)
 }
 
 __global__ void parallelMandelbrot(unsigned char *dev_image){
-    //int x = interpolate threadIdx.x and threadIdx.y and block
-    //int y = 
-    // if x*y < N
+    int x = threadIdx.x + (blockIdx.x % (IMG_W / blockDim.x)) * blockDim.x;
+    int y = threadIdx.y + (blockIdx.x / (IMG_W / blockDim.x)) * blockDim.y;
+    if (x < IMG_W && y < IMG_H && x*y < IMG_W*IMG_H){
+        float real = REAL_MIN + ( (float)x * INC_REAL);
+        float imag = IMAG_MIN + ( (float)y * INC_IMAG);
+        C planarComplexNum = {real, imag};
+        int itrs = mandelbrot(&planarComplexNum);
+        int pixel_index = (y * IMG_W + x) * CHANNELS;
+        unsigned char r, g, b;
+        getColor(itrs, &r, &g, &b);
+        dev_image[pixel_index + 0] = r;
+        dev_image[pixel_index + 1] = g;
+        dev_image[pixel_index + 2] = b;
+    }
 }
 
 int main(void){
-    // 1D blocks with 2D threads
-    // I would have to interpolate blockIdx and threadIdx in x and y to find x and y pixels co-ords
-    // formula to calculate real and imag for each parallel kernel
-    // real = real_min + (x * real_inc) , x is interpolated
-    // imag = imag_min + (y * imag_inc) , y is interpolated
     // each kernel will be launched with a zoom factor as function parameter
     // flow:
     // loop with scaling factor
     // launch kernel with scaling factor
     // inside kernel:
-    // calculate x and y by interpolating
-    // calculate real and imag
-    // run function normally
-    // kernel end
-    // cudadevice synch
-    // devicetohostcopy
-    // pass to stb_img
+    // adjust the ranges with scaling factor
     // repeat loop
     unsigned char *host_image = (unsigned char *)malloc(IMG_W * IMG_H * CHANNELS); //allocate memory on host before launching kernel to save computations in case memory fails to allocate
-    
+
     if (host_image == NULL)
     {
         fprintf(stderr, "Failed to allocate memory\n");
@@ -106,11 +106,13 @@ int main(void){
 
     parallelMandelbrot<<<NUM_BLOCKS, block_dim>>>(dev_image);
 
+    cudaDeviceSynchronize();
+
     cudaMemcpy(host_image, dev_image, IMG_W * IMG_H * CHANNELS, cudaMemcpyDeviceToHost);
 
     cudaFree(dev_image);
 
-    if (!stbi_write_png("mandel-c.png", IMG_W, IMG_H, CHANNELS, host_image, IMG_W * CHANNELS))
+    if (!stbi_write_png("mandel-cuda.png", IMG_W, IMG_H, CHANNELS, host_image, IMG_W * CHANNELS))
     {
         fprintf(stderr, "Failed to write image\n");
         return 1;
