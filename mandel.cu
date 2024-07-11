@@ -63,14 +63,14 @@ void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned char *b)
     *b = (unsigned char)(itrs * 2.35f);
 }
 
-__global__ void parallelMandelbrot(void){
+__global__ void parallelMandelbrot(unsigned char *dev_image){
     //int x = interpolate threadIdx.x and threadIdx.y and block
     //int y = 
     // if x*y < N
 }
 
 int main(void){
-    // figure out 2D blocks with 2D threads or 1D blocks with 2D threads
+    // 1D blocks with 2D threads
     // I would have to interpolate blockIdx and threadIdx in x and y to find x and y pixels co-ords
     // formula to calculate real and imag for each parallel kernel
     // real = real_min + (x * real_inc) , x is interpolated
@@ -88,6 +88,34 @@ int main(void){
     // devicetohostcopy
     // pass to stb_img
     // repeat loop
+    unsigned char *host_image = (unsigned char *)malloc(IMG_W * IMG_H * CHANNELS); //allocate memory on host before launching kernel to save computations in case memory fails to allocate
+    
+    if (host_image == NULL)
+    {
+        fprintf(stderr, "Failed to allocate memory\n");
+        return 1;
+    }
+
+    unsigned char *dev_image;
+
+    cudaMalloc(&dev_image, IMG_W * IMG_H * CHANNELS);
+
+    // handle allocation error
+
     dim3 block_dim(32,32,1);
-    parallelMandelbrot<<<NUM_BLOCKS, block_dim>>>();
+
+    parallelMandelbrot<<<NUM_BLOCKS, block_dim>>>(dev_image);
+
+    cudaMemcpy(host_image, dev_image, IMG_W * IMG_H * CHANNELS, cudaMemcpyDeviceToHost);
+
+    cudaFree(dev_image);
+
+    if (!stbi_write_png("mandel-c.png", IMG_W, IMG_H, CHANNELS, host_image, IMG_W * CHANNELS))
+    {
+        fprintf(stderr, "Failed to write image\n");
+        return 1;
+    }
+
+    free(host_image);
+    printf("Image written to mandel-c.png\n");
 }
