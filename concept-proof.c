@@ -4,8 +4,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#define IMG_W 1920
-#define IMG_H 1080
+#define IMG_W 7680
+#define IMG_H 4320
 #define CHANNELS 3
 #define MAX_ITR 100
 #define REAL_MIN -2.0

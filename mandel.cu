@@ -10,20 +10,20 @@
 #define MAX_ITR 100
 #define REAL_MIN -2.0
 #define REAL_MAX 1.0
-#define IMAG_MIN -1.5
-#define IMAG_MAX 1.5
+#define IMAG_MIN -0.85
+#define IMAG_MAX 0.8375
 #define INC_REAL (REAL_MAX - REAL_MIN) / IMG_W
 #define INC_IMAG (IMAG_MAX - IMAG_MIN) / IMG_H
 #define NUM_THREADS 32 * 32 // GTX 1650 supports threads launching in 2 dimnesions, each with 32 threads
-#define NUM_BLOCKS (int)ceil(((float)IMG_W * IMG_H) / NUM_THREADS)
+#define NUM_BLOCKS (int)ceil(((double)IMG_W * IMG_H) / NUM_THREADS)
 
 typedef struct complexNumber
 {
-    float real;
-    float imag;
+    double real;
+    double imag;
 } C;
 
-__device__ float complexAbs(C *c)
+__device__ double complexAbs(C *c)
 {
     return sqrt((c->real * c->real) + (c->imag * c->imag));
 }
@@ -67,8 +67,8 @@ __global__ void parallelMandelbrot(unsigned char *dev_image){
     int x = threadIdx.x + (blockIdx.x % (IMG_W / blockDim.x)) * blockDim.x;
     int y = threadIdx.y + (blockIdx.x / (IMG_W / blockDim.x)) * blockDim.y;
     if (x < IMG_W && y < IMG_H && x*y < IMG_W*IMG_H){
-        float real = REAL_MIN + ( (float)x * INC_REAL);
-        float imag = IMAG_MIN + ( (float)y * INC_IMAG);
+        double real = REAL_MIN + ( (double)x * INC_REAL);
+        double imag = IMAG_MIN + ( (double)y * INC_IMAG);
         C planarComplexNum = {real, imag};
         int itrs = mandelbrot(&planarComplexNum);
         int pixel_index = (y * IMG_W + x) * CHANNELS;
@@ -119,5 +119,5 @@ int main(void){
     }
 
     free(host_image);
-    printf("Image written to mandel-c.png\n");
+    printf("Image written to mandel-cuda.png\n");
 }
