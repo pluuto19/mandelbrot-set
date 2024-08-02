@@ -8,24 +8,18 @@
 #define IMG_H 1080
 #define CHANNELS 3
 #define MAX_ITR 100
-#define REAL_MIN -2.0
-#define REAL_MAX 1.0
-#define IMAG_MIN -0.85
-#define IMAG_MAX 0.8375
-#define INC_REAL (REAL_MAX - REAL_MIN) / IMG_W
-#define INC_IMAG (IMAG_MAX - IMAG_MIN) / IMG_H
 #define NUM_THREADS 32 * 32 // GTX 1650 supports threads launching in 2 dimnesions, each with 32 threads
-#define NUM_BLOCKS (int)ceil(((double)IMG_W * IMG_H) / NUM_THREADS)
+#define NUM_BLOCKS (int)ceil(((long double)IMG_W * IMG_H) / NUM_THREADS)
 
 typedef struct complexNumber
 {
-    double real;
-    double imag;
+    long double real;
+    long double imag;
 } C;
 
-__device__ double complexAbs(C *c)
+__device__ long double complexAbs(C *c)
 {
-    return sqrt((c->real * c->real) + (c->imag * c->imag));
+    return sqrtf((c->real * c->real) + (c->imag * c->imag));
 }
 
 __device__ void complexAdd(C *z, C *cnst, C *res)
@@ -63,12 +57,12 @@ __device__ void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned 
     *b = (unsigned char)(itrs * 2.35f);
 }
 
-__global__ void parallelMandelbrot(unsigned char *dev_image){
+__global__ void parallelMandelbrot(unsigned char *dev_image, long double REAL_MIN, long double IMAG_MIN, long double INC_REAL, long double INC_IMAG){
     int x = threadIdx.x + (blockIdx.x % (IMG_W / blockDim.x)) * blockDim.x;
     int y = threadIdx.y + (blockIdx.x / (IMG_W / blockDim.x)) * blockDim.y;
     if (x < IMG_W && y < IMG_H && x*y < IMG_W*IMG_H){
-        double real = REAL_MIN + ( (double)x * INC_REAL);
-        double imag = IMAG_MIN + ( (double)y * INC_IMAG);
+        long double real = REAL_MIN + ( (long double)x * INC_REAL);
+        long double imag = IMAG_MIN + ( (long double)y * INC_IMAG);
         C planarComplexNum = {real, imag};
         int itrs = mandelbrot(&planarComplexNum);
         int pixel_index = (y * IMG_W + x) * CHANNELS;
@@ -81,43 +75,32 @@ __global__ void parallelMandelbrot(unsigned char *dev_image){
 }
 
 int main(void){
-    // each kernel will be launched with a zoom factor as function parameter
-    // flow:
-    // loop with scaling factor
-    // launch kernel with scaling factor
-    // inside kernel:
-    // adjust the ranges with scaling factor
-    // repeat loop
-    unsigned char *host_image = (unsigned char *)malloc(IMG_W * IMG_H * CHANNELS); //allocate memory on host before launching kernel to save computations in case memory fails to allocate
+    long double REAL_MIN = -2.0;
+    long double REAL_MAX = 1.0;
+    long double IMAG_MIN = -0.85;
+    long double IMAG_MAX = 0.8375;
 
+    long double INC_REAL = (REAL_MAX - REAL_MIN) / IMG_W;
+    long double INC_IMAG = (IMAG_MAX - IMAG_MIN) / IMG_H;
+
+    unsigned char *host_image = (unsigned char *)malloc(IMG_W * IMG_H * CHANNELS);
     if (host_image == NULL)
     {
         fprintf(stderr, "Failed to allocate memory\n");
         return 1;
     }
-
     unsigned char *dev_image;
-
     cudaMalloc(&dev_image, IMG_W * IMG_H * CHANNELS);
-
-    // handle allocation error
-
     dim3 block_dim(32,32,1);
-
-    parallelMandelbrot<<<NUM_BLOCKS, block_dim>>>(dev_image);
-
+    parallelMandelbrot<<<NUM_BLOCKS, block_dim>>>(dev_image, REAL_MIN, IMAG_MIN, INC_REAL, INC_IMAG);
     cudaDeviceSynchronize();
-
     cudaMemcpy(host_image, dev_image, IMG_W * IMG_H * CHANNELS, cudaMemcpyDeviceToHost);
-
-    cudaFree(dev_image);
-
     if (!stbi_write_png("mandel-cuda.png", IMG_W, IMG_H, CHANNELS, host_image, IMG_W * CHANNELS))
     {
         fprintf(stderr, "Failed to write image\n");
         return 1;
     }
-
     free(host_image);
-    printf("Image written to mandel-cuda.png\n");
+    cudaFree(dev_image);
+    printf("Image(s) written!\n");
 }
