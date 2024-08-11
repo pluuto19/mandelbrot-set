@@ -92,7 +92,7 @@ int main(void){
     unsigned char *dev_image;
     cudaMalloc(&dev_image, IMG_W * IMG_H * CHANNELS);
     dim3 block_dim(32,32,1);
-    dim3 grid_dim(64,32,1);
+    dim3 grid_dim(ceil((float)IMG_W / 32), ceil((float)IMG_H / 32), 1);
     parallelMandelbrot<<<grid_dim, block_dim>>>(dev_image, REAL_MIN, IMAG_MIN, INC_REAL, INC_IMAG);
     cudaDeviceSynchronize();
     cudaMemcpy(host_image, dev_image, IMG_W * IMG_H * CHANNELS, cudaMemcpyDeviceToHost);
