@@ -58,8 +58,8 @@ __device__ void getColor(int itrs, unsigned char *r, unsigned char *g, unsigned 
 }
 
 __global__ void parallelMandelbrot(unsigned char *dev_image, long double REAL_MIN, long double IMAG_MIN, long double INC_REAL, long double INC_IMAG){
-    int x = threadIdx.x + (blockIdx.x % (IMG_W / blockDim.x)) * blockDim.x;
-    int y = threadIdx.y + (blockIdx.x / (IMG_W / blockDim.x)) * blockDim.y;
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
     if (x < IMG_W && y < IMG_H && x*y < IMG_W*IMG_H){
         long double real = REAL_MIN + ( (long double)x * INC_REAL);
         long double imag = IMAG_MIN + ( (long double)y * INC_IMAG);
@@ -92,7 +92,8 @@ int main(void){
     unsigned char *dev_image;
     cudaMalloc(&dev_image, IMG_W * IMG_H * CHANNELS);
     dim3 block_dim(32,32,1);
-    parallelMandelbrot<<<NUM_BLOCKS, block_dim>>>(dev_image, REAL_MIN, IMAG_MIN, INC_REAL, INC_IMAG);
+    dim3 grid_dim(64,32,1);
+    parallelMandelbrot<<<grid_dim, block_dim>>>(dev_image, REAL_MIN, IMAG_MIN, INC_REAL, INC_IMAG);
     cudaDeviceSynchronize();
     cudaMemcpy(host_image, dev_image, IMG_W * IMG_H * CHANNELS, cudaMemcpyDeviceToHost);
     if (!stbi_write_png("mandel-cuda.png", IMG_W, IMG_H, CHANNELS, host_image, IMG_W * CHANNELS))
