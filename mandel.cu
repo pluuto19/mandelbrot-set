@@ -96,7 +96,7 @@ int main(void){
     parallelMandelbrot<<<grid_dim, block_dim>>>(dev_image, REAL_MIN, IMAG_MIN, INC_REAL, INC_IMAG);
     cudaDeviceSynchronize();
     cudaMemcpy(host_image, dev_image, IMG_W * IMG_H * CHANNELS, cudaMemcpyDeviceToHost);
-    if (!stbi_write_png("mandelbrota-cuda.png", IMG_W, IMG_H, CHANNELS, host_image, IMG_W * CHANNELS))
+    if (!stbi_write_png("mandelbrot-cuda.png", IMG_W, IMG_H, CHANNELS, host_image, IMG_W * CHANNELS))
     {
         fprintf(stderr, "Failed to write image\n");
         return 1;
